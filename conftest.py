@@ -9,17 +9,14 @@ except ImportError:
 else:
     has_uvloop = True
 
-import aredis
 import aioredis
-import asyncio_redis
+from glide import GlideClient, GlideClientConfiguration, NodeAddress
 
 from unittest import mock
 from hiredis import Reader as HiReader
 from aioredis.parser import PyReader
 from redis.connection import HiredisParser, PythonParser, Encoder
-from aredis import connection as aredis_conn
 from aioredis import parser as aioredis_parser
-from asyncio_redis.protocol import RedisProtocol, HiRedisProtocol
 
 
 def pytest_addoption(parser):
@@ -106,23 +103,6 @@ def reader(request, reader_encoding):
     return request.param()
 
 
-async def aredis_start(host, port):
-    client = aredis.StrictRedis.from_url(
-        'redis://{}:{}'.format(host, port),
-        max_connections=2)
-    await client.ping()
-    return client
-
-
-async def aredis_py_start(host, port):
-    client = aredis.StrictRedis.from_url(
-        'redis://{}:{}'.format(host, port),
-        max_connections=2,
-        parser_class=aredis_conn.PythonParser)
-    await client.ping()
-    return client
-
-
 async def aioredis_start(host, port):
     client = await aioredis.create_redis_pool(
         (host, port),
@@ -144,45 +124,29 @@ async def aioredis_stop(client):
     await client.wait_closed()
 
 
-async def asyncio_redis_start(host, port):
-    pool = await asyncio_redis.Pool.create(
-        host, port, poolsize=2,
-        protocol_class=HiRedisProtocol)
-    await pool.ping()
-    return pool
+async def valkey_glide_start(host, port):
+    address = NodeAddress(host=host, port=port)
+    config = GlideClientConfiguration(addresses=[address])
+    client = await GlideClient.create(config)
+    await client.ping()
+    return client
 
 
-async def asyncio_redis_py_start(host, port):
-    pool = await asyncio_redis.Pool.create(
-        host, port, poolsize=2,
-        protocol_class=RedisProtocol)
-    await pool.ping()
-    return pool
-
-
-async def asyncio_redis_stop(pool):
-    pool.close()
+async def valkey_glide_stop(client):
+    # No explicit close method found in glide.GlideClient as of now
+    pass
 
 
 @pytest.fixture(params=[
-    pytest.param((aredis_start, None),
-                 marks=[pytest.mark.hiredis, pytest.mark.aredis],
-                 id='aredis[hi]-------'),
-    pytest.param((aredis_py_start, None),
-                 marks=[pytest.mark.pyreader, pytest.mark.aredis],
-                 id='aredis[py]-------'),
     pytest.param((aioredis_start, aioredis_stop),
                  marks=[pytest.mark.hiredis, pytest.mark.aioredis],
                  id='aioredis[hi]-----'),
     pytest.param((aioredis_py_start, aioredis_stop),
                  marks=[pytest.mark.pyreader, pytest.mark.aioredis],
                  id='aioredis[py]-----'),
-    pytest.param((asyncio_redis_start, asyncio_redis_stop),
-                 marks=[pytest.mark.hiredis, pytest.mark.asyncio_redis],
-                 id='asyncio_redis[hi]'),
-    pytest.param((asyncio_redis_py_start, asyncio_redis_stop),
-                 marks=[pytest.mark.pyreader, pytest.mark.asyncio_redis],
-                 id='asyncio_redis[py]'),
+    pytest.param((valkey_glide_start, valkey_glide_stop),
+                 marks=[pytest.mark.valkey_glide],
+                 id='valkey-glide'),
 ])
 def async_redis(loop, request):
     start, stop = request.param

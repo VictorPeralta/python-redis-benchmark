@@ -1,6 +1,5 @@
 import pytest
-import asyncio_redis
-import aredis
+from glide import GlideClient
 
 
 def execute(loop, coro_func, *args, **kwargs):
@@ -18,8 +17,6 @@ def benchmark_set(benchmark, async_redis, loop, key_set, value_set):
     """Test SET command with value of 1KiB size."""
     # XXX: aredis encodes data with latin-1 encoding,
     #       so we convert str to bytes
-    if isinstance(async_redis, aredis.StrictRedis):
-        value_set = value_set.encode('utf-8')
     benchmark(execute, loop, async_redis.set, key_set, value_set)
 
 
@@ -44,9 +41,5 @@ def benchmark_lrange(benchmark, async_redis, loop, key_lrange):
 def benchmark_zrange(benchmark, async_redis, loop, key_zrange):
     """Test get from sorted set 1k items."""
     # NOTE: asyncio_redis implies `withscores` parameter
-    if isinstance(async_redis, asyncio_redis.Pool):
-        kw = {}
-    else:
-        kw = {'withscores': True}
     benchmark(execute, loop, async_redis.zrange,
-              key_zrange, 0, -1, **kw)
+              key_zrange, 0, -1, withscores=True)
