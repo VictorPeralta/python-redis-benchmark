@@ -11,6 +11,7 @@ else:
 
 import aioredis
 from glide import GlideClient, GlideClientConfiguration, NodeAddress
+from coredis import Redis
 
 from unittest import mock
 from hiredis import Reader as HiReader
@@ -137,6 +138,16 @@ async def valkey_glide_stop(client):
     pass
 
 
+async def coredis_start(host, port):
+    client = Redis(host=host, port=port)
+    await client.ping()
+    return client
+
+
+async def coredis_stop(client):
+    await client.disconnect()
+
+
 @pytest.fixture(params=[
     pytest.param((aioredis_start, aioredis_stop),
                  marks=[pytest.mark.hiredis, pytest.mark.aioredis],
@@ -147,6 +158,9 @@ async def valkey_glide_stop(client):
     pytest.param((valkey_glide_start, valkey_glide_stop),
                  marks=[pytest.mark.valkey_glide],
                  id='valkey-glide'),
+    pytest.param((coredis_start, coredis_stop),
+                 marks=[pytest.mark.coredis],
+                 id='coredis'),
 ])
 def async_redis(loop, request):
     start, stop = request.param

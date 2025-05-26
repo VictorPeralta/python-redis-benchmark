@@ -1,5 +1,7 @@
 import pytest
 from glide import GlideClient
+from glide.async_commands.core import RangeByIndex
+from coredis import Redis as CoredisRedisClient
 
 
 def execute(loop, coro_func, *args, **kwargs):
@@ -40,6 +42,10 @@ def benchmark_lrange(benchmark, async_redis, loop, key_lrange):
 @pytest.mark.benchmark(group="async-zrange")
 def benchmark_zrange(benchmark, async_redis, loop, key_zrange):
     """Test get from sorted set 1k items."""
-    # NOTE: asyncio_redis implies `withscores` parameter
-    benchmark(execute, loop, async_redis.zrange,
-              key_zrange, 0, -1, withscores=True)
+    if isinstance(async_redis, GlideClient):
+        benchmark(execute, loop, async_redis.zrange_withscores,
+                  key_zrange, RangeByIndex(0, -1))
+    else:
+        # NOTE: asyncio_redis implies `withscores` parameter
+        benchmark(execute, loop, async_redis.zrange,
+                  key_zrange, 0, -1, withscores=True)
