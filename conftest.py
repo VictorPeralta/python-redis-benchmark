@@ -9,7 +9,6 @@ except ImportError:
 else:
     has_uvloop = True
 
-import aredis
 import aioredis
 import asyncio_redis
 
@@ -17,7 +16,6 @@ from unittest import mock
 from hiredis import Reader as HiReader
 from aioredis.parser import PyReader
 from redis.connection import HiredisParser, PythonParser, Encoder
-from aredis import connection as aredis_conn
 from aioredis import parser as aioredis_parser
 from asyncio_redis.protocol import RedisProtocol, HiRedisProtocol
 
@@ -106,21 +104,6 @@ def reader(request, reader_encoding):
     return request.param()
 
 
-async def aredis_start(host, port):
-    client = aredis.StrictRedis.from_url(
-        'redis://{}:{}'.format(host, port),
-        max_connections=2)
-    await client.ping()
-    return client
-
-
-async def aredis_py_start(host, port):
-    client = aredis.StrictRedis.from_url(
-        'redis://{}:{}'.format(host, port),
-        max_connections=2,
-        parser_class=aredis_conn.PythonParser)
-    await client.ping()
-    return client
 
 
 async def aioredis_start(host, port):
@@ -165,12 +148,6 @@ async def asyncio_redis_stop(pool):
 
 
 @pytest.fixture(params=[
-    pytest.param((aredis_start, None),
-                 marks=[pytest.mark.hiredis, pytest.mark.aredis],
-                 id='aredis[hi]-------'),
-    pytest.param((aredis_py_start, None),
-                 marks=[pytest.mark.pyreader, pytest.mark.aredis],
-                 id='aredis[py]-------'),
     pytest.param((aioredis_start, aioredis_stop),
                  marks=[pytest.mark.hiredis, pytest.mark.aioredis],
                  id='aioredis[hi]-----'),

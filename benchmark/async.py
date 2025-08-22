@@ -1,6 +1,5 @@
 import pytest
 import asyncio_redis
-import aredis
 
 
 def execute(loop, coro_func, *args, **kwargs):
@@ -16,10 +15,6 @@ def benchmark_ping(benchmark, async_redis, loop):
 @pytest.mark.benchmark(group='async-set')
 def benchmark_set(benchmark, async_redis, loop, key_set, value_set):
     """Test SET command with value of 1KiB size."""
-    # XXX: aredis encodes data with latin-1 encoding,
-    #       so we convert str to bytes
-    if isinstance(async_redis, aredis.StrictRedis):
-        value_set = value_set.encode('utf-8')
     benchmark(execute, loop, async_redis.set, key_set, value_set)
 
 

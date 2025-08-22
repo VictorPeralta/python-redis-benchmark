@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  redis:
+    image: "valkey/valkey:8.0-bookworm"
+    ports:
+      - "6379:6379"
+  benchmark:
+    build: .
+    depends_on:
+      - redis
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    command: tail -f /dev/null
+    volumes:
+      - ./:/app

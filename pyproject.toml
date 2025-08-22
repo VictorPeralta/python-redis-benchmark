@@ -1,0 +1,32 @@
+[project]
+name = "app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aioredis==1.3.1",
+    "asyncio-redis==0.16.0",
+    "hiredis>=3.2.1",
+    "pytest>=8.4.1",
+    "pytest-benchmark>=3.1.1",
+    "redis==2.10.6",
+    "setuptools>=80.9.0",
+    "uvloop>=0.21.0 ; implementation_name == 'cpython'",
+]
+
+
+[tool.pytest.ini_options]
+testpaths = "benchmark"
+python_files = "*.py"
+python_functions = "benchmark_*"
+
+markers = [
+    "pyreader: Mark the test function (parameter) as one testing python parser.",
+    "hiredis: Mark the test function (parameter) as one testing hiredis parser.",
+    "aioredis: Marker for aioredis tests.",
+    "asyncio_redis: Marker for asyncio_redis tests.",
+    "redispy: Marker for redis-py tests.",
+    "uvloop: Run tests with uvloop.",
+    "asyncio: Run tests with asyncio."
+]

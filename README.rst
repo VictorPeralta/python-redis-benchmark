@@ -15,7 +15,6 @@ Tested libraries
 
 * `aioredis`_ — async mode (hiredis/python parser), parsers implementation;
 
-* `aredis`_ — async mode (hiredis/python parser);
 
 * `asyncio-redis`_ — async mode (hiredis/python parser);
 
@@ -25,7 +24,6 @@ Tested libraries
 
 
 .. _aioredis: https://github.com/aio-libs/aioredis
-.. _aredis: https://github.com/NoneGG/aredis
 .. _asyncio-redis: https://github.com/jonathanslenders/asyncio-redis
 .. _hiredis: https://github.com/redis/hiredis-py
 .. _redis-py: https://github.com/andymccurdy/redis-py
