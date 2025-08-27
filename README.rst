@@ -3,22 +3,27 @@ Python Redis clients benchmarks
 
 Run, either::
 
-    $ pip install -r requirements.txt
-    $ py.test
+
+    $ uv run pytest
 
 or, alternatively, run in container::
 
-    $ vagga run
+    $ docker-compose up -d
+    $ docker-compose exec benchmark uv run pytest --redis-host=redis
+
 
 Tested libraries
 ----------------
 
 * `aioredis`_ — async mode (hiredis/python parser), parsers implementation;
 
-
 * `asyncio-redis`_ — async mode (hiredis/python parser);
 
 * `redis-py`_ — sync mode (hiredis/python parser), parsers implementation;
+
+* `coredis`_ — async mode;
+
+* `valkey-glide`_ — async mode;
 
 * `hiredis`_ — parser;
 
@@ -27,6 +32,8 @@ Tested libraries
 .. _asyncio-redis: https://github.com/jonathanslenders/asyncio-redis
 .. _hiredis: https://github.com/redis/hiredis-py
 .. _redis-py: https://github.com/andymccurdy/redis-py
+.. _coredis: https://github.com/alisaifee/coredis
+.. _valkey-glide: https://github.com/valkey-io/valkey-glide
 
 Tests and Results
 -----------------
@@ -681,12 +688,10 @@ Parse error reply
 Test environment
 ~~~~~~~~~~~~~~~~
 
-:CPU: Intel(R) Core(TM) i5-4460  CPU @ 3.20GHz
+**Updated Environment (New Concurrent Tests)**
 
-:Cores: 4
+:Container: Docker with Valkey 7.2.7 (Redis-compatible)
 
-:RAM: 16GiB
+:Python: CPython 3.12
 
-:Python: CPython 3.6.3
 
-:Redis: Redis server v=4.0.1 sha=00000000:0 malloc=jemalloc-3.6.0 bits=64 build=6f05deda2aff122a
