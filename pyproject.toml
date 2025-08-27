@@ -7,12 +7,14 @@ requires-python = ">=3.12"
 dependencies = [
     "aioredis==1.3.1",
     "asyncio-redis==0.16.0",
+    "coredis>=5.0.0",
     "hiredis>=3.2.1",
     "pytest>=8.4.1",
     "pytest-benchmark>=3.1.1",
-    "redis==2.10.6",
+    "redis==6.4.0",
     "setuptools>=80.9.0",
     "uvloop>=0.21.0 ; implementation_name == 'cpython'",
+    "valkey-glide",
 ]
 
 
@@ -27,6 +29,14 @@ markers = [
     "aioredis: Marker for aioredis tests.",
     "asyncio_redis: Marker for asyncio_redis tests.",
     "redispy: Marker for redis-py tests.",
+    "redis_asyncio: Marker for redis.asyncio tests.",
+    "coredis: Marker for coredis tests.",
+    "valkey_glide: Marker for valkey-glide tests.",
     "uvloop: Run tests with uvloop.",
-    "asyncio: Run tests with asyncio."
+    "asyncio: Run tests with asyncio.",
+    "encoder: Marker for command encoder tests.",
+    "simple_string: Marker for simple string parser tests.",
+    "simple_error: Marker for simple error parser tests.",
+    "bulk_string_1k: Marker for bulk string parser tests.",
+    "multi_bulk: Marker for multi bulk parser tests."
 ]

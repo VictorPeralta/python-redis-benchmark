@@ -11,11 +11,10 @@ else:
 
 import aioredis
 import asyncio_redis
+import redis.asyncio as redis_async
+from coredis import Redis as CoredisRedis
+from glide import GlideClient, GlideClientConfiguration, NodeAddress
 
-from unittest import mock
-from hiredis import Reader as HiReader
-from aioredis.parser import PyReader
-from redis.connection import HiredisParser, PythonParser, Encoder
 from aioredis import parser as aioredis_parser
 from asyncio_redis.protocol import RedisProtocol, HiRedisProtocol
 
@@ -27,20 +26,13 @@ def pytest_addoption(parser):
                      help="Redis server port")
 
 
-@pytest.fixture(scope='session', params=[
-    pytest.param(HiredisParser,
-                 marks=[pytest.mark.hiredis, pytest.mark.redispy],
-                 id='redis-py[hi]'),
-    pytest.param(PythonParser,
-                 marks=[pytest.mark.pyreader, pytest.mark.redispy],
-                 id='redis-py[py]'),
-])
+@pytest.fixture(scope='session')
 def redispy(request):
     host = request.config.getoption('--redis-host')
     port = request.config.getoption('--redis-port')
     pool = redis.ConnectionPool(host=host, port=port,
                                 parser_class=request.param)
-    r = redis.StrictRedis(host=host, port=port, connection_pool=pool)
+    r = redis.Redis(host=host, port=port, connection_pool=pool)
     return r
 
 
@@ -53,29 +45,6 @@ class FakeSocket(io.BytesIO):
         return self.readinto(buf)
 
 
-class PythonParserReader:
-    Parser = PythonParser
-
-    def __init__(self, encoding=None):
-        self._sock = FakeSocket()
-        self._parser = self.Parser(2**17)
-        enc = Encoder(encoding, 'strict', encoding is not None)
-        self._parser.on_connect(
-            mock.Mock(_sock=self._sock,
-                      encoder=enc))
-
-    def feed(self, data):
-        if not self._sock.tell():
-            self._sock.write(data)
-        self._sock.seek(0)
-
-    def gets(self):
-        return self._parser.read_response()
-
-
-class HiredisParserReader(PythonParserReader):
-    Parser = HiredisParser
-
 
 @pytest.fixture(params=[
     pytest.param(None, id='bytes'),
@@ -85,19 +54,7 @@ def reader_encoding(request):
     return request.param
 
 
-@pytest.fixture(params=[
-    pytest.param(HiReader, marks=pytest.mark.hiredis,
-                 id='hiredis'),
-    pytest.param(PyReader,
-                 marks=[pytest.mark.pyreader, pytest.mark.aioredis],
-                 id='aioredis[py]'),
-    pytest.param(PythonParserReader,
-                 marks=[pytest.mark.pyreader, pytest.mark.redispy],
-                 id='redispy[py]'),
-    pytest.param(HiredisParserReader,
-                 marks=[pytest.mark.hiredis, pytest.mark.redispy],
-                 id='redispy[hi]'),
-])
+@pytest.fixture()
 def reader(request, reader_encoding):
     if reader_encoding:
         return request.param(encoding=reader_encoding)
@@ -147,6 +104,66 @@ async def asyncio_redis_stop(pool):
     pool.close()
 
 
+async def redis_asyncio_start(host, port):
+    client = redis_async.Redis(
+        host=host,
+        port=port,
+        max_connections=2000,
+        decode_responses=False,
+    )
+    await client.ping()
+    return client
+
+
+async def redis_asyncio_stop(client):
+    # Gracefully close if available
+    try:
+        await client.aclose()
+    except Exception:
+        pass
+
+
+# Optional coredis client support
+async def coredis_start(host, port):
+    client = CoredisRedis(
+        host=host,
+        port=port,
+        db=0,
+        max_connections=2,
+        decode_responses=False,
+        # Use RESP2 for compatibility with older redis versions
+        protocol_version=2,
+    )
+    await client.ping()
+    return client
+
+
+async def coredis_stop(client):
+    try:
+        await client.quit()
+    except Exception:
+        pass
+
+
+# Optional valkey-glide client support
+async def valkey_glide_start(host, port):
+    config = GlideClientConfiguration(
+        [NodeAddress(host, port)],
+        request_timeout=500,
+        inflight_requests_limit=1500
+    )
+    client = await GlideClient.create(config)
+    await client.ping()
+    return client
+
+
+async def valkey_glide_stop(client):
+    try:
+        await client.close()
+    except Exception:
+        pass
+
+
 @pytest.fixture(params=[
     pytest.param((aioredis_start, aioredis_stop),
                  marks=[pytest.mark.hiredis, pytest.mark.aioredis],
@@ -160,6 +177,15 @@ async def asyncio_redis_stop(pool):
     pytest.param((asyncio_redis_py_start, asyncio_redis_stop),
                  marks=[pytest.mark.pyreader, pytest.mark.asyncio_redis],
                  id='asyncio_redis[py]'),
+    pytest.param((redis_asyncio_start, redis_asyncio_stop),
+                 marks=[pytest.mark.redis_asyncio],
+                 id='redis.asyncio'),
+    pytest.param((coredis_start, coredis_stop),
+                 marks=[pytest.mark.coredis],
+                 id='coredis'),
+    pytest.param((valkey_glide_start, valkey_glide_stop),
+                 marks=[pytest.mark.valkey_glide],
+                 id='valkey-glide'),
 ])
 def async_redis(loop, request):
     start, stop = request.param
@@ -215,7 +241,7 @@ MAX_SIZE = 2**15
 def r(request):
     host = request.config.getoption('--redis-host')
     port = request.config.getoption('--redis-port')
-    return redis.StrictRedis(host=host, port=port)
+    return redis.Redis(host=host, port=port)
 
 
 @pytest.fixture(
@@ -258,7 +284,7 @@ def key_zrange(data_size, r):
     p = r.pipeline()
     for i in range(data_size):
         val = 'val:{:05}'.format(i)
-        p.zadd(key, i / 2, val)
+        p.zadd(key, {val: i / 2})
     p.execute()
     return key
 
